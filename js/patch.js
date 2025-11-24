@@ -1,4 +1,73 @@
 // Patch: Cho phép xuất config mà không cần đủ 6 đĩa và tùy chọn bỏ thông tin character
+// Patch file to override generateConfig function with new format
+
+(function() {
+    'use strict';
+    
+    // Wait for the original functions to be loaded
+    window.addEventListener('DOMContentLoaded', function() {
+        // Override the generateConfig function
+        window.generateConfig = function(avatar, weapon, discsData) {
+            let output = [];
+            
+            // Equipment section (Discs)
+            const validDiscs = discsData.filter(disc => 
+                disc.disc_name && 
+                disc.main_property && 
+                disc.sub_properties.length > 0
+            );
+            
+            if (validDiscs.length > 0) {
+                output.push('    .equipment = .{');
+                
+                validDiscs.forEach((disc, index) => {
+                    const discSetId = dicsSet[disc.disc_name];
+                    const discId = discSetId * 100 + (disc.slot + 1) + 40;
+                    
+                    output.push('        .{ // Slot ' + (disc.slot + 1));
+                    output.push('            .id = ' + discId + ', // ' + (discSet_id2name[discSetId] || '') + ' [' + (disc.slot + 1) + ']');
+                    output.push('            .level = 15,');
+                    output.push('            .exp = 0,');
+                    output.push('            .star = 1,');
+                    output.push('            .lock = false,');
+                    
+                    // Main property
+                    const mainPropId = dicsPropertyTypeId[disc.main_property];
+                    const mainPropValue = dicsPropertyType[mainPropId][1]; // base value for main stat
+                    
+                    output.push('            .properties = .{.{');
+                    output.push('                .key = ' + mainPropId + ', // ' + disc.main_property);
+                    output.push('                .base_value = ' + mainPropValue + ',');
+                    output.push('                .add_value = 0,');
+                    output.push('            }},');
+                    
+                    // Sub properties
+                    output.push('            .sub_properties = .{');
+                    disc.sub_properties.forEach(([propName, level]) => {
+                        const subPropId = dicsPropertyTypeId[propName];
+                        const subPropValue = dicsPropertyType[subPropId][2]; // base value for sub stat
+                        
+                        output.push('                .{');
+                        output.push('                    .key = ' + subPropId + ', // ' + propName);
+                        output.push('                    .base_value = ' + subPropValue + ',');
+                        output.push('                    .add_value = ' + level + ',');
+                        output.push('                },');
+                    });
+                    output.push('            },');
+                    
+                    output.push('        },');
+                });
+                
+                output.push('    },');
+            }
+            
+            
+            return output.join('\n');
+        };
+        
+    });
+})();
+
 (function() {
     'use strict';
     
@@ -194,43 +263,4 @@
     }
 })();
 
-/* 
-=== GIẢI THÍCH LOGIC ===
 
-1. checkAnyDiscConfigured():
-   - Kiểm tra xem có ít nhất 1 trong 6 đĩa hoặc tab ALL được config chưa
-   - Trả về true nếu có, false nếu không có đĩa nào
-
-2. updateGenerateButton():
-   - Gọi checkAnyDiscConfigured() để kiểm tra
-   - Enable button "Generate Config" nếu có đĩa
-   - Disable button nếu không có đĩa nào
-   - Thay đổi màu sắc button tương ứng
-
-3. addCharacterToggle():
-   - Tạo 1 checkbox mới ở phần Configuration Output
-   - Checkbox này cho phép user chọn xuất chỉ disc hay cả character
-
-4. Hook vào Generate button:
-   - Lắng nghe sự kiện click
-   - Sau 100ms (đợi code gốc generate xong), kiểm tra checkbox
-   - Nếu checkbox được tick, gọi filterCharacterInfo() để xử lý
-
-5. filterCharacterInfo():
-   - Tìm vị trí ".equipment" trong text
-   - Đếm dấu ngoặc nhọn {} để xác định phạm vi của .equipment
-   - Cắt bỏ phần character info (.id, .level, .unlocked_talent_num)
-   - Loại bỏ dấu }, thừa ở cuối
-   - Trả về chỉ phần .equipment
-
-6. Event Listeners:
-   - Lắng nghe thay đổi trên tất cả select box của đĩa
-   - Lắng nghe thay đổi trong avatar/weapon container bằng MutationObserver
-   - Mỗi khi có thay đổi, gọi updateGenerateButton() để cập nhật trạng thái button
-
-FLOW:
-User chọn đĩa → Event listener trigger → updateGenerateButton() 
-→ checkAnyDiscConfigured() → Enable/Disable button
-User click Generate → Code gốc generate config → Patch kiểm tra checkbox
-→ Nếu checkbox tick → filterCharacterInfo() xử lý output
-*/
