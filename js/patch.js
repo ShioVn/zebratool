@@ -18,7 +18,6 @@
             );
             
             if (validDiscs.length > 0) {
-                output.push('    .equipment = .{');
                 
                 validDiscs.forEach((disc, index) => {
                     const discSetId = dicsSet[disc.disc_name];
@@ -58,7 +57,6 @@
                     output.push('        },');
                 });
                 
-                output.push('    },');
             }
             
             
