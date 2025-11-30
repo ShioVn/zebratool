@@ -54,7 +54,7 @@
                     });
                     output.push('            },');
                     
-                    output.push('        },');
+                    output.push('        }');
                 });
                 
             }
